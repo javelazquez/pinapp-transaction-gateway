@@ -2,7 +2,9 @@ package com.pinapp.gateway.infrastructure.rest;
 
 import com.pinapp.gateway.domain.model.Transaction;
 import com.pinapp.gateway.domain.ports.in.TransactionService;
+import com.pinapp.gateway.infrastructure.rest.dto.NotificationSummaryResponse;
 import com.pinapp.gateway.infrastructure.rest.dto.TransactionRequest;
+import com.pinapp.gateway.infrastructure.rest.dto.TransactionResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,7 +28,7 @@ public class TransactionController {
     @ApiResponse(responseCode = "200", description = "Transacción procesada correctamente")
     @ApiResponse(responseCode = "400", description = "Solicitud inválida")
     @PostMapping
-    public void processTransaction(
+    public org.springframework.http.ResponseEntity<TransactionResponse> processTransaction(
             @RequestBody(description = "Detalles de la transacción a procesar") @org.springframework.web.bind.annotation.RequestBody TransactionRequest request) {
         Transaction transaction = new Transaction(
                 request.id(),
@@ -36,6 +38,20 @@ public class TransactionController {
                 request.phone(),
                 request.status());
 
-        transactionService.process(transaction);
+        com.pinapp.gateway.domain.model.ProcessingResult result = transactionService.process(transaction);
+
+        NotificationSummaryResponse notificationResponse = new NotificationSummaryResponse(
+                result.notificationStatus().success(),
+                result.notificationStatus().messageId(),
+                result.notificationStatus().provider(),
+                result.notificationStatus().errorMessage());
+
+        TransactionResponse response = new TransactionResponse(
+                result.transaction().id(),
+                result.transaction().amount(),
+                result.transaction().status().name(),
+                notificationResponse);
+
+        return org.springframework.http.ResponseEntity.ok(response);
     }
 }
