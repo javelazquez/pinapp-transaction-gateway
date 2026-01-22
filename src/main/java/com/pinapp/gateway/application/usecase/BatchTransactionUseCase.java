@@ -1,25 +1,24 @@
 package com.pinapp.gateway.application.usecase;
 
 import com.pinapp.gateway.domain.model.Transaction;
+import com.pinapp.gateway.domain.model.TransactionStatusInfo;
 import com.pinapp.gateway.domain.ports.in.BatchTransactionService;
 import com.pinapp.gateway.domain.ports.out.NotificationPort;
-import com.pinapp.gateway.infrastructure.rest.dto.TransactionStatusDTO;
-import com.pinapp.gateway.infrastructure.store.NotificationStatusStore;
+import com.pinapp.gateway.domain.ports.out.TransactionStatusPort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class BatchTransactionUseCase implements BatchTransactionService {
 
     private final NotificationPort notificationPort;
-    private final NotificationStatusStore statusStore;
+    private final TransactionStatusPort statusPort;
 
-    public BatchTransactionUseCase(NotificationPort notificationPort, NotificationStatusStore statusStore) {
+    public BatchTransactionUseCase(NotificationPort notificationPort, TransactionStatusPort statusPort) {
         this.notificationPort = notificationPort;
-        this.statusStore = statusStore;
+        this.statusPort = statusPort;
     }
 
     @Override
@@ -27,14 +26,11 @@ public class BatchTransactionUseCase implements BatchTransactionService {
         List<String> transactionIds = new ArrayList<>();
 
         for (Transaction transaction : transactions) {
-            // Ensure ID is generated if not present, though Transaction model likely has
-            // it.
-            // Assumption: Transaction ID is used.
             String id = transaction.id().toString();
             transactionIds.add(id);
 
-            // Register initial status
-            statusStore.updateStatus(id, new TransactionStatusDTO(id, "PROCESSING", null));
+            // Register initial status using domain model and port
+            statusPort.save(new TransactionStatusInfo(id, "PROCESSING", null));
 
             // Async call
             notificationPort.sendAsync(transaction);

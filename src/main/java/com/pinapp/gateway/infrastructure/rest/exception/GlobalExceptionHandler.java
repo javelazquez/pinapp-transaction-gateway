@@ -1,4 +1,4 @@
-package com.pinapp.gateway.infrastructure.rest.advice;
+package com.pinapp.gateway.infrastructure.rest.exception;
 
 import com.pinapp.notify.exception.NotificationException;
 import com.pinapp.notify.exception.ProviderException;
