@@ -9,4 +9,6 @@ public interface NotificationPort {
     NotificationStatus sendPendingNotification(Transaction t);
 
     NotificationStatus sendFailureNotification(Transaction t);
+
+    java.util.concurrent.CompletableFuture<NotificationStatus> sendAsync(Transaction t);
 }
