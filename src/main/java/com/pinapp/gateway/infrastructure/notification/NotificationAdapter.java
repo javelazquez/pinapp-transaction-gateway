@@ -6,6 +6,7 @@ import com.pinapp.gateway.domain.ports.out.NotificationPort;
 import com.pinapp.notify.domain.Notification;
 import com.pinapp.notify.domain.NotificationResult;
 import com.pinapp.notify.domain.Recipient;
+import com.pinapp.notify.domain.NotificationPriority;
 import com.pinapp.notify.domain.vo.ChannelType;
 import com.pinapp.notify.ports.in.NotificationService;
 import org.springframework.stereotype.Component;
@@ -56,7 +57,7 @@ public class NotificationAdapter implements NotificationPort {
                 .id(t.id())
                 .recipient(recipient)
                 .message("Transaction " + t.id() + " PROCESSING")
-                .priority(com.pinapp.notify.domain.NotificationPriority.NORMAL)
+                .priority(NotificationPriority.NORMAL)
                 .build();
 
         return notificationService.sendAsync(notification)
