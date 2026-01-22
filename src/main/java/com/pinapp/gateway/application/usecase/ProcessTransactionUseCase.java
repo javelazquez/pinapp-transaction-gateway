@@ -1,9 +1,12 @@
-package com.pinapp.gateway.domain.core.service;
+package com.pinapp.gateway.application.usecase;
 
 import com.pinapp.gateway.domain.model.Transaction;
+import com.pinapp.gateway.domain.model.TransactionStatus;
 import com.pinapp.gateway.domain.ports.in.TransactionService;
 import com.pinapp.gateway.domain.ports.out.NotificationPort;
+import org.springframework.stereotype.Service;
 
+@Service
 public class ProcessTransactionUseCase implements TransactionService {
 
     private final NotificationPort notificationPort;
@@ -14,7 +17,7 @@ public class ProcessTransactionUseCase implements TransactionService {
 
     @Override
     public void process(Transaction transaction) {
-        var status = transaction.status();
+        TransactionStatus status = transaction.status();
 
         switch (status) {
             case COMPLETED -> notificationPort.sendSuccessNotification(transaction);
