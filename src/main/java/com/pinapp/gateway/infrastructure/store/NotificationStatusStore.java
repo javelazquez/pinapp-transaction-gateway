@@ -1,21 +1,24 @@
 package com.pinapp.gateway.infrastructure.store;
 
-import com.pinapp.gateway.infrastructure.rest.dto.TransactionStatusDTO;
+import com.pinapp.gateway.domain.model.TransactionStatusInfo;
+import com.pinapp.gateway.domain.ports.out.TransactionStatusPort;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class NotificationStatusStore {
+public class NotificationStatusStore implements TransactionStatusPort {
 
-    private final ConcurrentHashMap<String, TransactionStatusDTO> store = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, TransactionStatusInfo> store = new ConcurrentHashMap<>();
 
-    public void updateStatus(String id, TransactionStatusDTO status) {
-        store.put(id, status);
+    @Override
+    public void save(TransactionStatusInfo statusInfo) {
+        store.put(statusInfo.id(), statusInfo);
     }
 
-    public Optional<TransactionStatusDTO> getStatus(String id) {
+    @Override
+    public Optional<TransactionStatusInfo> findById(String id) {
         return Optional.ofNullable(store.get(id));
     }
 }

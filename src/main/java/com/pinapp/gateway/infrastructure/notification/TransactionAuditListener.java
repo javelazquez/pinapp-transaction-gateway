@@ -1,5 +1,8 @@
 package com.pinapp.gateway.infrastructure.notification;
 
+import com.pinapp.gateway.domain.model.NotificationStatus;
+import com.pinapp.gateway.domain.model.TransactionStatusInfo;
+import com.pinapp.gateway.domain.ports.out.TransactionStatusPort;
 import com.pinapp.notify.core.events.NotificationEvent;
 import com.pinapp.notify.core.events.NotificationFailedEvent;
 import com.pinapp.notify.core.events.NotificationSentEvent;
@@ -7,18 +10,15 @@ import com.pinapp.notify.core.events.NotificationSubscriber;
 import com.pinapp.notify.domain.NotificationResult;
 import org.springframework.stereotype.Component;
 
-import com.pinapp.gateway.infrastructure.rest.dto.NotificationSummaryResponse;
-import com.pinapp.gateway.infrastructure.rest.dto.TransactionStatusDTO;
-import com.pinapp.gateway.infrastructure.store.NotificationStatusStore;
 import java.util.UUID;
 
 @Component
 public class TransactionAuditListener implements NotificationSubscriber {
 
-    private final NotificationStatusStore statusStore;
+    private final TransactionStatusPort statusPort;
 
-    public TransactionAuditListener(NotificationStatusStore statusStore) {
-        this.statusStore = statusStore;
+    public TransactionAuditListener(TransactionStatusPort statusPort) {
+        this.statusPort = statusPort;
     }
 
     @Override
@@ -46,14 +46,17 @@ public class TransactionAuditListener implements NotificationSubscriber {
     }
 
     private void updateStatusStore(NotificationResult result) {
-        TransactionStatusDTO statusDTO = new TransactionStatusDTO(
+        NotificationStatus domainNotificationStatus = new NotificationStatus(
+                result.success(),
+                result.notificationId().toString(),
+                result.providerName(),
+                result.errorMessage());
+
+        TransactionStatusInfo statusInfo = new TransactionStatusInfo(
                 result.notificationId().toString(),
                 result.success() ? "COMPLETED" : "FAILED",
-                new NotificationSummaryResponse(
-                        result.success(),
-                        result.notificationId().toString(),
-                        result.providerName(),
-                        result.errorMessage()));
-        statusStore.updateStatus(result.notificationId().toString(), statusDTO);
+                domainNotificationStatus);
+
+        statusPort.save(statusInfo);
     }
 }
