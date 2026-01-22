@@ -1,11 +1,12 @@
 package com.pinapp.gateway.domain.ports.out;
 
 import com.pinapp.gateway.domain.model.Transaction;
+import com.pinapp.gateway.domain.model.NotificationStatus;
 
 public interface NotificationPort {
-    void sendSuccessNotification(Transaction t);
+    NotificationStatus sendSuccessNotification(Transaction t);
 
-    void sendPendingNotification(Transaction t);
+    NotificationStatus sendPendingNotification(Transaction t);
 
-    void sendFailureNotification(Transaction t);
+    NotificationStatus sendFailureNotification(Transaction t);
 }
