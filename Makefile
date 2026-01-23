@@ -38,7 +38,9 @@ install-sdk: ## Instala localmente la dependencia pinapp-notify-sdk (requerido p
 # Comandos combinados
 rebuild: clean build ## Limpia y compila el proyecto
 
-dev: build run ## Compila y ejecuta la aplicación
+dev: ## Compila y ejecuta la aplicación (actualiza dependencias SNAPSHOT)
+	$(MAVEN) clean install -U
+	$(MAVEN) spring-boot:run
 
 # Docker
 docker-build: ## Construye la imagen Docker completando dependencias locales

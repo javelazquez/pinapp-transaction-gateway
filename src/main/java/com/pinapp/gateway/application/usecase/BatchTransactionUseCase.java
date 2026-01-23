@@ -36,14 +36,22 @@ import java.util.List;
  *       respuesta inmediata con los IDs de las transacciones registradas</li>
  * </ul>
  * <p>
- * <strong>Flujo de Ejecución:</strong>
+ * <strong>Flujo de Ejecución Asíncrono:</strong>
  * </p>
  * <ol>
  *   <li>Registra cada transacción con estado "PROCESSING" en el puerto de persistencia</li>
- *   <li>Envía notificación push para cada transacción (procesamiento asíncrono)</li>
- *   <li>Retorna la lista de IDs de transacciones para que el cliente pueda consultar
- *       su estado posteriormente</li>
+ *   <li>Dispara notificación push de forma asíncrona (fire-and-forget) para cada transacción</li>
+ *   <li>Retorna inmediatamente la lista de IDs de transacciones sin esperar el procesamiento</li>
+ *   <li>El SDK procesa las notificaciones en segundo plano</li>
+ *   <li>El {@link com.pinapp.gateway.infrastructure.notification.TransactionAuditListener}
+ *       captura los eventos del SDK y actualiza automáticamente los estados finales
+ *       ("COMPLETED" o "FAILED") en el store</li>
  * </ol>
+ * <p>
+ * <strong>Importante:</strong> Este caso de uso implementa el patrón fire-and-forget.
+ * No bloquea el hilo principal esperando respuestas del SDK. La actualización de estado
+ * final ocurre mediante eventos asíncronos manejados por el TransactionAuditListener.
+ * </p>
  *
  * @author PinApp Gateway Team
  * @since 1.0.0
@@ -65,15 +73,36 @@ public class BatchTransactionUseCase implements BatchTransactionService {
     }
 
     /**
-     * Procesa un lote de transacciones de forma asíncrona.
+     * Procesa un lote de transacciones de forma asíncrona (fire-and-forget).
      * <p>
-     * Este método registra cada transacción con estado inicial "PROCESSING" y envía
-     * una notificación push para cada una. El procesamiento es asíncrono, permitiendo
-     * que el método retorne inmediatamente con los IDs de las transacciones registradas.
+     * Este método implementa un flujo verdaderamente asíncrono y no bloqueante:
+     * </p>
+     * <ul>
+     *   <li>Registra cada transacción con estado inicial "PROCESSING" en el store</li>
+     *   <li>Dispara notificaciones push de forma asíncrona sin esperar el resultado</li>
+     *   <li>Retorna inmediatamente con los IDs de las transacciones registradas</li>
+     * </ul>
+     * <p>
+     * <strong>Actualización de Estado mediante Eventos:</strong>
+     * </p>
+     * <p>
+     * La actualización del estado final ("COMPLETED" o "FAILED") ocurre automáticamente
+     * mediante eventos del SDK. El {@link com.pinapp.gateway.infrastructure.notification.TransactionAuditListener},
+     * que está registrado como suscriptor del SDK, captura los eventos
+     * ({@code NotificationSentEvent} o {@code NotificationFailedEvent}) y actualiza
+     * el store con el estado final correspondiente.
+     * </p>
+     * <p>
+     * <strong>No bloqueante:</strong> Este método no realiza llamadas bloqueantes
+     * (como {@code .join()} o {@code .get()}) sobre los {@link java.util.concurrent.CompletableFuture}
+     * retornados por el adaptador. El hilo principal retorna inmediatamente después
+     * de disparar las notificaciones.
      * </p>
      * <p>
      * El cliente puede consultar el estado de cada transacción posteriormente mediante
-     * el endpoint de consulta de estado.
+     * el endpoint de consulta de estado. Inicialmente verá "PROCESSING" y luego
+     * "COMPLETED" o "FAILED" una vez que el SDK procese la notificación y el listener
+     * actualice el estado.
      * </p>
      *
      * @param transactions Lista de transacciones a procesar en lote
@@ -90,8 +119,10 @@ public class BatchTransactionUseCase implements BatchTransactionService {
             // Register initial status using domain model and port
             statusPort.save(new TransactionStatusInfo(id, "PROCESSING", null));
 
-            // Send notification via Push channel for batch processing
-            pushAdapter.notify(transaction, "Transaction " + transaction.id() + " PROCESSING");
+            // Dispatch async notification (fire-and-forget)
+            // The TransactionAuditListener will update the final status via SDK events
+            pushAdapter.sendAsync(transaction, "Transaction " + transaction.id() + " PROCESSING");
+            // CRITICAL: No .join(), .get(), or any blocking call here
         }
 
         return transactionIds;

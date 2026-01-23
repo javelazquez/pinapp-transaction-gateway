@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Adaptador de infraestructura (Outbound Adapter) para notificaciones por Email.
@@ -63,7 +64,12 @@ public class EmailNotificationAdapter implements NotificationPort {
                 Map.of("customerId", transaction.customerName())
         );
         
-        Notification notification = Notification.create(recipient, message);
+        // Usar el transactionId como notificationId para mantener la relación
+        Notification notification = Notification.builder()
+                .id(transaction.id())
+                .recipient(recipient)
+                .message(message)
+                .build();
         
         NotificationResult result = emailNotificationService.send(notification, ChannelType.EMAIL);
         
@@ -71,6 +77,45 @@ public class EmailNotificationAdapter implements NotificationPort {
                 (result.success() ? "SUCCESS" : "FAILED"));
         
         return mapToStatus(result);
+    }
+
+    /**
+     * Envía una notificación de forma asíncrona (fire-and-forget) para una transacción.
+     * <p>
+     * Similar a {@link PushNotificationAdapter#sendAsync}, este método dispara la notificación
+     * y retorna inmediatamente. El procesamiento real ocurre en segundo plano y los eventos
+     * son capturados por el {@link TransactionAuditListener}.
+     * </p>
+     *
+     * @param transaction La transacción de dominio que contiene los datos del destinatario
+     * @param message El mensaje de la notificación definido por la lógica de negocio
+     * @return Un {@link CompletableFuture} que se completa cuando la notificación es enviada al SDK
+     */
+    @Override
+    public CompletableFuture<Void> sendAsync(Transaction transaction, String message) {
+        System.out.println("[EMAIL-ADAPTER] Dispatching async notification for transaction: " + transaction.id());
+        
+        Recipient recipient = new Recipient(
+                transaction.email(), 
+                transaction.phone(), 
+                Map.of("customerId", transaction.customerName())
+        );
+        
+        // Usar el transactionId como notificationId para mantener la relación
+        // Esto permite que TransactionAuditListener actualice el estado correcto
+        Notification notification = Notification.builder()
+                .id(transaction.id())
+                .recipient(recipient)
+                .message(message)
+                .build();
+        
+        CompletableFuture<NotificationResult> sdkFuture = emailNotificationService.sendAsync(notification, ChannelType.EMAIL);
+        
+        return sdkFuture.thenAccept(result -> {
+            System.out.println("[EMAIL-ADAPTER] Async notification dispatched. " +
+                    "Final status will be updated by TransactionAuditListener. " +
+                    "SDK Status: " + (result.success() ? "SUCCESS" : "FAILED"));
+        });
     }
 
     private NotificationStatus mapToStatus(NotificationResult result) {
