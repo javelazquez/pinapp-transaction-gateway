@@ -3,6 +3,8 @@ package com.pinapp.gateway.domain.ports.out;
 import com.pinapp.gateway.domain.model.Transaction;
 import com.pinapp.gateway.domain.model.NotificationStatus;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface NotificationPort {
     NotificationStatus sendSuccessNotification(Transaction t);
 
@@ -10,5 +12,5 @@ public interface NotificationPort {
 
     NotificationStatus sendFailureNotification(Transaction t);
 
-    java.util.concurrent.CompletableFuture<NotificationStatus> sendAsync(Transaction t);
+    CompletableFuture<NotificationStatus> sendAsync(Transaction t);
 }
