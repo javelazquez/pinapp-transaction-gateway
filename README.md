@@ -88,57 +88,53 @@ El siguiente diagrama muestra cómo el `ProcessTransactionUseCase` inyecta los t
 
 ```mermaid
 graph TB
-    subgraph "Application Layer"
+    subgraph appLayer["Application Layer"]
         UC[ProcessTransactionUseCase]
     end
     
-    subgraph "Domain Layer"
+    subgraph domainLayer["Domain Layer"]
         PORT[NotificationPort Interface]
     end
     
-    subgraph "Infrastructure Layer - Adapters"
-        EMAIL[EmailNotificationAdapter<br/>@Component emailAdapter]
-        SMS[SmsNotificationAdapter<br/>@Component smsAdapter]
-        PUSH[PushNotificationAdapter<br/>@Component pushAdapter]
+    subgraph infraAdapters["Infrastructure Layer - Adapters"]
+        EMAIL[EmailNotificationAdapter]
+        SMS[SmsNotificationAdapter]
+        PUSH[PushNotificationAdapter]
     end
     
-    subgraph "Infrastructure Layer - Config"
-        EMAIL_CONFIG[EmailConfig<br/>@Bean emailNotificationService]
-        SMS_CONFIG[SmsConfig<br/>@Bean smsNotificationService]
-        PUSH_CONFIG[PushConfig<br/>@Bean pushNotificationService]
+    subgraph infraConfig["Infrastructure Layer - Config"]
+        EMAIL_CONFIG[EmailConfig]
+        SMS_CONFIG[SmsConfig]
+        PUSH_CONFIG[PushConfig]
     end
     
-    subgraph "SDK Layer"
-        EMAIL_SDK[NotificationService<br/>Email Channel]
-        SMS_SDK[NotificationService<br/>SMS Channel]
-        PUSH_SDK[NotificationService<br/>Push Channel]
+    subgraph sdkLayer["SDK Layer"]
+        EMAIL_SDK[NotificationService Email]
+        SMS_SDK[NotificationService SMS]
+        PUSH_SDK[NotificationService Push]
     end
     
-    UC -->|@Qualifier emailAdapter| EMAIL
-    UC -->|@Qualifier smsAdapter| SMS
-    UC -->|@Qualifier pushAdapter| PUSH
+    UC -->|"@Qualifier emailAdapter"| EMAIL
+    UC -->|"@Qualifier smsAdapter"| SMS
+    UC -->|"@Qualifier pushAdapter"| PUSH
     
     EMAIL -.implements.-> PORT
     SMS -.implements.-> PORT
     PUSH -.implements.-> PORT
     
-    EMAIL -->|@Qualifier emailNotificationService| EMAIL_SDK
-    SMS -->|@Qualifier smsNotificationService| SMS_SDK
-    PUSH -->|@Qualifier pushNotificationService| PUSH_SDK
+    EMAIL -->|"@Qualifier emailNotificationService"| EMAIL_SDK
+    SMS -->|"@Qualifier smsNotificationService"| SMS_SDK
+    PUSH -->|"@Qualifier pushNotificationService"| PUSH_SDK
     
-    EMAIL_CONFIG --> EMAIL_SDK
-    SMS_CONFIG --> SMS_SDK
-    PUSH_CONFIG --> PUSH_SDK
-    
-    style UC fill:#e1f5ff
-    style PORT fill:#fff4e1
-    style EMAIL fill:#e8f5e9
-    style SMS fill:#e8f5e9
-    style PUSH fill:#e8f5e9
-    style EMAIL_CONFIG fill:#f3e5f5
-    style SMS_CONFIG fill:#f3e5f5
-    style PUSH_CONFIG fill:#f3e5f5
+    EMAIL_CONFIG -->|"@Bean emailNotificationService"| EMAIL_SDK
+    SMS_CONFIG -->|"@Bean smsNotificationService"| SMS_SDK
+    PUSH_CONFIG -->|"@Bean pushNotificationService"| PUSH_SDK
 ```
+
+**Notas del Diagrama:**
+- Cada adaptador está anotado con `@Component` y un nombre único (emailAdapter, smsAdapter, pushAdapter)
+- Cada configuración crea un bean `NotificationService` con nombre único mediante `@Bean`
+- Los `@Qualifier` en los edges muestran cómo Spring resuelve las dependencias
 
 **Flujo de Ejecución:**
 
