@@ -17,5 +17,7 @@ public record TransactionRequest(
 
                 @Schema(description = "Teléfono de contacto", example = "+541112345678") String phone,
 
-                @Schema(description = "Estado inicial de la transacción", example = "COMPLETED") TransactionStatus status) {
+                @Schema(description = "Estado inicial de la transacción", example = "COMPLETED") TransactionStatus status,
+
+                @Schema(description = "Token del dispositivo para notificaciones push (opcional)", example = "f_test_device_token_123456789") String deviceToken) {
 }
