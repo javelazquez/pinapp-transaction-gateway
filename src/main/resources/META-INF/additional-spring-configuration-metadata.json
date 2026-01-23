@@ -1,0 +1,39 @@
+{
+  "properties": [
+    {
+      "name": "pinapp.notify.email.provider",
+      "type": "java.lang.String",
+      "description": "Email notification provider name (e.g., sendgrid)"
+    },
+    {
+      "name": "pinapp.notify.email.api-key",
+      "type": "java.lang.String",
+      "description": "Email provider API key"
+    },
+    {
+      "name": "pinapp.notify.sms.provider",
+      "type": "java.lang.String",
+      "description": "SMS notification provider name (e.g., twilio)"
+    },
+    {
+      "name": "pinapp.notify.sms.account-sid",
+      "type": "java.lang.String",
+      "description": "SMS provider account SID"
+    },
+    {
+      "name": "pinapp.notify.push.provider",
+      "type": "java.lang.String",
+      "description": "Push notification provider name (e.g., firebase)"
+    },
+    {
+      "name": "pinapp.notify.push.server-key",
+      "type": "java.lang.String",
+      "description": "Push provider server key"
+    },
+    {
+      "name": "pinapp.notify.retry-attempts",
+      "type": "java.lang.Integer",
+      "description": "Number of retry attempts for notifications"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+pinapp:
+  notify:
+    email:
+      provider: "sendgrid"
+      api-key: "SG.mock_key_123"
+    sms:
+      provider: "twilio"
+      account-sid: "AC_mock_sid_456"
+    push:
+      provider: "firebase"
+      server-key: "FK_mock_key_789"
+    retry-attempts: 2
