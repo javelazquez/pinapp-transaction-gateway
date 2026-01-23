@@ -24,6 +24,54 @@ El servicio sigue estrictamente los principios de **Clean Architecture**:
 *   **Domain (Java Puro)**: Contiene la lógica de negocio, reglas y modelos. No tiene dependencias de Spring ni de librerías externas.
 *   **Infrastructure (Spring Boot)**: Implementa los adaptadores que conectan el dominio con el mundo exterior (API REST, SDKs, Bases de Datos).
 
+### 🔌 Specialized Outbound Adapters
+
+El sistema implementa una arquitectura de **Adaptadores Especializados** donde cada canal de notificación (Email, SMS, Push) tiene su propio puerto de salida y su propia configuración independiente.
+
+#### 🛡️ Fault Isolation
+
+Esta arquitectura proporciona **aislamiento de fallos** (Fault Isolation):
+
+*   Si la configuración de Email falla, los canales SMS y Push continúan operativos.
+*   Cada adaptador es independiente y autocontenido, con su propio `NotificationService` configurado.
+*   Los fallos en un canal no afectan la disponibilidad de los demás.
+
+#### 📐 Estructura de Adaptadores
+
+Cada canal implementa la interfaz `NotificationPort` pero con su propia especialización:
+
+```
+NotificationPort (Interface)
+├── EmailNotificationAdapter (@Component("emailAdapter"))
+│   └── @Qualifier("emailNotificationService")
+├── SmsNotificationAdapter (@Component("smsAdapter"))
+│   └── @Qualifier("smsNotificationService")
+└── PushNotificationAdapter (@Component("pushAdapter"))
+    └── @Qualifier("pushNotificationService")
+```
+
+#### ⚙️ Configuración Distribuida
+
+Las credenciales y configuraciones se gestionan mediante `application.yml` de Spring Boot, inyectadas mediante `@Value` en clases `@Configuration` específicas por canal:
+
+*   **EmailConfig**: Inyecta `pinapp.notify.email.*`
+*   **SmsConfig**: Inyecta `pinapp.notify.sms.*`
+*   **PushConfig**: Inyecta `pinapp.notify.push.*`
+
+Cada configuración crea su propio bean `NotificationService` con el nombre único correspondiente, permitiendo que Spring resuelva correctamente las dependencias mediante `@Qualifier`.
+
+#### 🔄 Extensibilidad (Open/Closed Principle)
+
+Para agregar un nuevo canal de notificación (ej. Slack, WhatsApp), solo se requiere:
+
+1. **Crear un nuevo Port** en `domain.ports.out` (si es necesario extender la interfaz)
+2. **Crear un nuevo Adapter** implementando `NotificationPort` con `@Component("slackAdapter")`
+3. **Crear una nueva Config** con `@Configuration` que inyecte las propiedades desde `application.yml`
+4. **Registrar el bean** con un nombre único (ej. `slackNotificationService`)
+5. **Actualizar el Use Case** para inyectar el nuevo adaptador mediante `@Qualifier`
+
+Este diseño cumple el **Principio Abierto/Cerrado (OCP)**: abierto para extensión, cerrado para modificación.
+
 ### 📏 Reglas de Negocio (Business Rules)
 
 El Gateway decide el canal de notificación basándose en el estado final de la transacción:
@@ -31,8 +79,73 @@ El Gateway decide el canal de notificación basándose en el estado final de la 
 | Transaction Status | Notification Channel | Estrategia | Prioridad |
 | :--- | :--- | :--- | :--- |
 | **COMPLETED** | 📧 **Email** | Síncrono | Crítica (Alta) |
-| **PUSH** | 📲 **Pending** | Asíncrono (Batch) | Baja (No Bloqueante) |
+| **PENDING** | 📲 **Push** | Asíncrono (Batch) | Baja (No Bloqueante) |
 | **REJECTED** | 💬 **SMS** | Síncrono | Seguridad (Alertas) |
+
+### 📊 Diagrama de Inyección de Dependencias
+
+El siguiente diagrama muestra cómo el `ProcessTransactionUseCase` inyecta los tres adaptadores especializados mediante `@Qualifier`:
+
+```mermaid
+graph TB
+    subgraph "Application Layer"
+        UC[ProcessTransactionUseCase]
+    end
+    
+    subgraph "Domain Layer"
+        PORT[NotificationPort Interface]
+    end
+    
+    subgraph "Infrastructure Layer - Adapters"
+        EMAIL[EmailNotificationAdapter<br/>@Component emailAdapter]
+        SMS[SmsNotificationAdapter<br/>@Component smsAdapter]
+        PUSH[PushNotificationAdapter<br/>@Component pushAdapter]
+    end
+    
+    subgraph "Infrastructure Layer - Config"
+        EMAIL_CONFIG[EmailConfig<br/>@Bean emailNotificationService]
+        SMS_CONFIG[SmsConfig<br/>@Bean smsNotificationService]
+        PUSH_CONFIG[PushConfig<br/>@Bean pushNotificationService]
+    end
+    
+    subgraph "SDK Layer"
+        EMAIL_SDK[NotificationService<br/>Email Channel]
+        SMS_SDK[NotificationService<br/>SMS Channel]
+        PUSH_SDK[NotificationService<br/>Push Channel]
+    end
+    
+    UC -->|@Qualifier emailAdapter| EMAIL
+    UC -->|@Qualifier smsAdapter| SMS
+    UC -->|@Qualifier pushAdapter| PUSH
+    
+    EMAIL -.implements.-> PORT
+    SMS -.implements.-> PORT
+    PUSH -.implements.-> PORT
+    
+    EMAIL -->|@Qualifier emailNotificationService| EMAIL_SDK
+    SMS -->|@Qualifier smsNotificationService| SMS_SDK
+    PUSH -->|@Qualifier pushNotificationService| PUSH_SDK
+    
+    EMAIL_CONFIG --> EMAIL_SDK
+    SMS_CONFIG --> SMS_SDK
+    PUSH_CONFIG --> PUSH_SDK
+    
+    style UC fill:#e1f5ff
+    style PORT fill:#fff4e1
+    style EMAIL fill:#e8f5e9
+    style SMS fill:#e8f5e9
+    style PUSH fill:#e8f5e9
+    style EMAIL_CONFIG fill:#f3e5f5
+    style SMS_CONFIG fill:#f3e5f5
+    style PUSH_CONFIG fill:#f3e5f5
+```
+
+**Flujo de Ejecución:**
+
+1. El `ProcessTransactionUseCase` recibe una `Transaction` con un estado (COMPLETED, PENDING, REJECTED).
+2. Según el estado, selecciona el adaptador correspondiente mediante el switch.
+3. El adaptador especializado mapea la transacción al modelo del SDK y envía la notificación.
+4. Cada adaptador utiliza su propio `NotificationService` configurado independientemente.
 
 ---
 
@@ -108,18 +221,54 @@ Documentación interactiva disponible vía Swagger UI:
 ```text
 pinapp-transaction-gateway/
 ├── domain/                      # 🧠 NÚCLEO (Sin dependencias de framework)
-│   ├── model/                   # Entidades (Transaction, Notification)
-│   ├── port/                    # Interfaces (Inbound/Outbound Ports)
-│   └── usecase/                 # Lógica de aplicación (ProcessTransaction)
+│   ├── model/                   # Entidades (Transaction, NotificationStatus)
+│   ├── ports/
+│   │   ├── in/                  # Puertos de entrada (TransactionService)
+│   │   └── out/                 # Puertos de salida (NotificationPort)
+│   └── application/
+│       └── usecase/              # Casos de uso (ProcessTransactionUseCase)
 ├── infrastructure/              # 🔌 ADAPTADORES (Spring Boot)
-│   ├── adapter/
-│   │   ├── notification/        # Implementación usando pinapp-notify-sdk
-│   │   └── input/rest/          # Controllers REST
-│   └── config/                  # Configuración (Beans, Swagger)
+│   ├── notification/            # Adaptadores especializados
+│   │   ├── EmailNotificationAdapter
+│   │   ├── SmsNotificationAdapter
+│   │   ├── PushNotificationAdapter
+│   │   └── TransactionAuditListener
+│   ├── config/                  # Configuraciones por canal
+│   │   ├── EmailConfig          # @Bean emailNotificationService
+│   │   ├── SmsConfig            # @Bean smsNotificationService
+│   │   ├── PushConfig           # @Bean pushNotificationService
+│   │   └── SwaggerConfig
+│   ├── rest/                    # Controllers REST
+│   └── store/                   # Implementación de persistencia
+├── src/main/resources/
+│   ├── application.yml          # Configuración de credenciales por canal
+│   └── META-INF/
+│       └── additional-spring-configuration-metadata.json
 ├── Dockerfile                   # 🐳 Multistage Build Definition
 ├── Makefile                     # 🛠️ Task Runner
 └── prepare_docker.sh            # 📜 Automation Script
 ```
+
+### 📝 Configuración de Credenciales
+
+Las credenciales se gestionan en `application.yml`:
+
+```yaml
+pinapp:
+  notify:
+    email:
+      provider: "sendgrid"
+      api-key: "SG.your_api_key_here"
+    sms:
+      provider: "twilio"
+      account-sid: "AC_your_account_sid_here"
+    push:
+      provider: "firebase"
+      server-key: "FK_your_server_key_here"
+    retry-attempts: 2
+```
+
+Cada clase de configuración (`EmailConfig`, `SmsConfig`, `PushConfig`) inyecta estas propiedades mediante `@Value` y crea su propio bean `NotificationService` especializado.
 
 ---
 

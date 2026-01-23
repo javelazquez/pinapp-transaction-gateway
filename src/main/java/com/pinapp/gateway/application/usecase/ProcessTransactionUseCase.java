@@ -31,9 +31,9 @@ public class ProcessTransactionUseCase implements TransactionService {
         TransactionStatus status = transaction.status();
 
         NotificationStatus notificationStatus = switch (status) {
-            case COMPLETED -> emailAdapter.notify(transaction, "Transaction " + transaction.id() + " COMPLETED");
-            case PENDING -> pushAdapter.notify(transaction, "Transaction " + transaction.id() + " PENDING");
-            case REJECTED -> smsAdapter.notify(transaction, "Transaction " + transaction.id() + " REJECTED");
+            case COMPLETED -> emailAdapter.notify(transaction, "¡Pago Exitoso!");
+            case PENDING -> pushAdapter.notify(transaction, "Tu pago está siendo procesado.");
+            case REJECTED -> smsAdapter.notify(transaction, "Alerta: Transacción Rechazada.");
         };
 
         return new ProcessingResult(transaction, notificationStatus);
