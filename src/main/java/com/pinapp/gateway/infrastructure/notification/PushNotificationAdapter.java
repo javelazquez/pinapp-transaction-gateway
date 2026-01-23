@@ -36,10 +36,19 @@ public class PushNotificationAdapter implements NotificationPort {
     public NotificationStatus notify(Transaction transaction, String message) {
         System.out.println("[PUSH-ADAPTER] Processing notification for transaction: " + transaction.id());
         
+        // El deviceToken debe venir de la transacción
+        if (transaction.deviceToken() == null || transaction.deviceToken().isBlank()) {
+            System.out.println("[PUSH-ADAPTER] WARNING: deviceToken no proporcionado en la transacción. " +
+                    "La notificación push puede fallar.");
+        }
+        
         Recipient recipient = new Recipient(
                 transaction.email(), 
                 transaction.phone(), 
-                Map.of("customerId", transaction.customerName())
+                Map.of(
+                    "customerId", transaction.customerName(),
+                    "deviceToken", transaction.deviceToken() != null ? transaction.deviceToken() : ""
+                )
         );
         
         Notification notification = Notification.create(recipient, message);

@@ -52,7 +52,8 @@ public class TransactionController {
                                 request.customerName(),
                                 request.email(),
                                 request.phone(),
-                                request.status());
+                                request.status(),
+                                request.deviceToken());
 
                 ProcessingResult result = transactionService.process(transaction);
 
@@ -82,7 +83,8 @@ public class TransactionController {
                                         request.customerName(),
                                         request.email(),
                                         request.phone(),
-                                        request.status()));
+                                        request.status(),
+                                        request.deviceToken()));
                 }
 
                 List<String> ids = batchTransactionService.processBatch(transactions);

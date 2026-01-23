@@ -9,5 +9,6 @@ public record Transaction(
     String customerName,
     String email,
     String phone,
-    TransactionStatus status
+    TransactionStatus status,
+    String deviceToken
 ) {}
