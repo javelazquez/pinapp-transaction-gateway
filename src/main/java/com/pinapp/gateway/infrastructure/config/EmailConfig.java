@@ -16,24 +16,43 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Configuración distribuida para el canal de notificaciones por Email.
  * <p>
+ * <strong>Responsabilidad en Arquitectura Hexagonal:</strong>
+ * </p>
+ * <p>
+ * Esta clase pertenece a la capa de Infraestructura y gestiona la instanciación técnica
+ * del servicio de notificaciones para el canal Email. Su responsabilidad es:
+ * </p>
+ * <ul>
+ *   <li>Leer las propiedades de configuración desde {@code application.yml}</li>
+ *   <li>Construir el bean {@link NotificationService} utilizando el Builder del SDK</li>
+ *   <li>Registrar el proveedor específico de Email con sus credenciales</li>
+ *   <li>Configurar políticas de reintento y suscriptores de eventos</li>
+ * </ul>
+ * <p>
+ * <strong>Por qué esta configuración está separada:</strong>
+ * </p>
+ * <p>
+ * La configuración distribuida por canal permite aislar fallos (Fault Isolation):
+ * si la configuración de Email falla, los canales SMS y Push continúan operativos.
+ * Además, facilita la extensibilidad al permitir agregar nuevos canales sin modificar
+ * los existentes (Principio Abierto/Cerrado).
+ * </p>
+ * <p>
  * Esta clase configura un {@link NotificationService} específico para el canal EMAIL,
  * utilizando las propiedades definidas en {@code application.yml} bajo la ruta
  * {@code pinapp.notify.email.*}.
  * </p>
- * <p>
  * <strong>Propiedades requeridas en application.yml:</strong>
  * <ul>
  *   <li>{@code pinapp.notify.email.provider} - Nombre del proveedor de email (ej: "sendgrid")</li>
  *   <li>{@code pinapp.notify.email.api-key} - Clave API del proveedor de email</li>
  *   <li>{@code pinapp.notify.retry-attempts} - Número de intentos de reintento para notificaciones</li>
  * </ul>
- * </p>
  * <p>
  * El bean creado ({@code emailNotificationService}) es único y autocontenido, registrando
  * únicamente el proveedor de Email. El servicio incluye automáticamente el
  * {@link TransactionAuditListener} para auditoría de transacciones.
  * </p>
- * <p>
  * <strong>Ejemplo de configuración:</strong>
  * <pre>
  * pinapp:
@@ -43,7 +62,6 @@ import org.springframework.context.annotation.Configuration;
  *       api-key: "SG.your_api_key_here"
  *     retry-attempts: 2
  * </pre>
- * </p>
  *
  * @author PinApp Gateway Team
  * @since 1.0.0
@@ -64,14 +82,12 @@ public class EmailConfig {
 
     /**
      * Crea y configura el bean {@link NotificationService} específico para notificaciones por Email.
-     * <p>
      * Este bean utiliza el Builder del SDK ({@link PinappNotifyConfig}) para configurar:
      * <ul>
      *   <li>El proveedor de Email con las credenciales inyectadas desde el YAML</li>
      *   <li>La política de reintentos configurada con {@code retry-attempts}</li>
      *   <li>El suscriptor de eventos ({@link TransactionAuditListener}) para auditoría</li>
      * </ul>
-     * </p>
      *
      * @param listener El listener de auditoría que será registrado como suscriptor de eventos
      * @return Una instancia configurada de {@link NotificationService} para el canal EMAIL

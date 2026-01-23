@@ -9,6 +9,39 @@ import com.pinapp.gateway.domain.ports.out.NotificationPort;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+/**
+ * Caso de uso principal que orquesta el procesamiento de transacciones y la selección
+ * de estrategias de notificación.
+ * <p>
+ * <strong>Responsabilidad en Arquitectura Hexagonal:</strong>
+ * </p>
+ * <p>
+ * Esta clase pertenece a la capa de Aplicación y actúa como orquestador que coordina
+ * la lógica de negocio sin conocer los detalles de implementación de la infraestructura.
+ * Implementa el patrón Use Case, encapsulando una operación de negocio específica.
+ * </p>
+ * <p>
+ * <strong>Reglas de Negocio para Selección de Canal:</strong>
+ * </p>
+ * <ul>
+ *   <li><strong>COMPLETED → Email</strong>: Las transacciones exitosas se notifican por Email
+ *       (canal de alta prioridad para confirmaciones formales).</li>
+ *   <li><strong>PENDING → Push</strong>: Las transacciones en proceso se notifican por Push
+ *       (canal no bloqueante para actualizaciones de estado en tiempo real).</li>
+ *   <li><strong>REJECTED → SMS</strong>: Las transacciones rechazadas se notifican por SMS
+ *       (canal de alerta inmediata para situaciones críticas que requieren atención del usuario).</li>
+ * </ul>
+ * <p>
+ * La inyección de múltiples implementaciones del mismo puerto ({@link NotificationPort}) mediante
+ * {@code @Qualifier} permite que el caso de uso seleccione el adaptador correcto según la regla
+ * de negocio, manteniendo el principio de inversión de dependencias.
+ * </p>
+ *
+ * @author PinApp Gateway Team
+ * @since 1.0.0
+ * @see TransactionService
+ * @see NotificationPort
+ */
 @Service
 public class ProcessTransactionUseCase implements TransactionService {
 
@@ -26,6 +59,17 @@ public class ProcessTransactionUseCase implements TransactionService {
         this.pushAdapter = pushAdapter;
     }
 
+    /**
+     * Procesa una transacción y selecciona el canal de notificación según su estado.
+     * <p>
+     * Este método implementa la lógica de negocio que determina qué adaptador de notificación
+     * debe utilizarse basándose en el estado de la transacción. La decisión está encapsulada
+     * en el switch, siguiendo las reglas de negocio definidas.
+     * </p>
+     *
+     * @param transaction La transacción a procesar
+     * @return Un resultado que combina la transacción original con el estado de la notificación enviada
+     */
     @Override
     public ProcessingResult process(Transaction transaction) {
         TransactionStatus status = transaction.status();

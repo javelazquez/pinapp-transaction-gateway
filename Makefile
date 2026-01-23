@@ -3,7 +3,7 @@ APP_NAME=pinapp-transaction-gateway
 MAVEN=mvn
 PORT=8080
 
-.PHONY: help build run test clean swagger install-sdk docker-build docker-run docker-stop docker-clean
+.PHONY: help build run test clean swagger javadoc install-sdk docker-build docker-run docker-stop docker-clean
 
 help: ## Muestra ayuda de los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -22,6 +22,15 @@ clean: ## Limpia los archivos generados por la compilación (target)
 
 swagger: ## Abre la documentación de Swagger en el navegador (macOS)
 	open http://localhost:$(PORT)/swagger-ui.html || echo "Abre http://localhost:$(PORT)/swagger-ui.html en tu navegador"
+
+javadoc: ## Genera y abre la documentación JavaDoc en el navegador (macOS)
+	$(MAVEN) javadoc:javadoc
+	@if [ -f target/reports/apidocs/index.html ]; then \
+		open target/reports/apidocs/index.html || echo "Abre target/reports/apidocs/index.html en tu navegador"; \
+	else \
+		echo "Error: No se pudo generar la documentación JavaDoc"; \
+		exit 1; \
+	fi
 
 install-sdk: ## Instala localmente la dependencia pinapp-notify-sdk (requerido para el build)
 	@echo "Asegúrate de tener el repositorio pinapp-notify-sdk clonado y ejecuta 'mvn install' en esa carpeta."
@@ -45,4 +54,3 @@ docker-stop: ## Detiene el contenedor de la aplicación
 docker-clean: docker-stop ## Detiene el contenedor y elimina la imagen
 	docker rmi pinapp-gateway || true
 	rm -rf libs/
-

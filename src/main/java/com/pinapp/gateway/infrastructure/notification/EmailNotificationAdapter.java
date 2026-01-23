@@ -14,14 +14,35 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
- * Adaptador de infraestructura para notificaciones por Email.
+ * Adaptador de infraestructura (Outbound Adapter) para notificaciones por Email.
  * <p>
- * Implementa {@link NotificationPort} y se conecta con el SDK de notificaciones
- * utilizando el servicio específico de Email configurado.
+ * <strong>Responsabilidad en Arquitectura Hexagonal:</strong>
+ * </p>
+ * <p>
+ * Este adaptador implementa el puerto {@link NotificationPort} definido por el dominio,
+ * actuando como puente entre el dominio y el SDK externo de notificaciones. Su responsabilidad
+ * es traducir los modelos del dominio ({@link com.pinapp.gateway.domain.model.Transaction})
+ * al modelo del SDK ({@link com.pinapp.notify.domain.Notification}) y ejecutar el envío
+ * a través del canal Email.
+ * </p>
+ * <p>
+ * <strong>Por qué existe este adaptador:</strong>
+ * </p>
+ * <ul>
+ *   <li>Mantiene el dominio libre de dependencias del SDK de PinApp</li>
+ *   <li>Encapsula la lógica de mapeo entre modelos de dominio y modelos del SDK</li>
+ *   <li>Permite cambiar la implementación del SDK sin afectar el dominio</li>
+ *   <li>Facilita el testing al poder mockear el puerto en lugar del SDK</li>
+ * </ul>
+ * <p>
+ * El adaptador utiliza {@code @Qualifier("emailNotificationService")} para inyectar
+ * el servicio específico de Email configurado en {@link com.pinapp.gateway.infrastructure.config.EmailConfig}.
  * </p>
  *
  * @author PinApp Gateway Team
  * @since 1.0.0
+ * @see NotificationPort
+ * @see com.pinapp.gateway.infrastructure.config.EmailConfig
  */
 @Component("emailAdapter")
 public class EmailNotificationAdapter implements NotificationPort {
